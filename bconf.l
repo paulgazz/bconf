@@ -3,22 +3,11 @@
 %option yylineno
 
 %{
-#define MAX_SOURCE_DEPTH 20
-
-struct source_file {
-  YY_BUFFER_STATE buffer;
-  char *name;
-  int lineno;
-};
-
-static struct source_file source_stack[MAX_SOURCE_DEPTH];
-static int source_index = 0;
-
-extern char *filename;
+#include <stdio.h>
+#include <string.h>
 %}
 
-WORD [a-zA-Z_/\.][0-9a-zA-Z_/\.]*
-WORD_BROKEN [a-zA-Z_/\.][0-9a-zA-Z_/\.\-]*
+WORD [a-zA-Z_/\.][0-9a-zA-Z_/\.\-]*
 
 FILENAME [0-9a-zA-Z_\-/\.]+
 
@@ -45,21 +34,16 @@ COMMENT [^\r\n]*"#"[^\r\n]*{NEWLINE}
 /* separate lexing for test conditions */
 %x IN_TEST
 
-/* include other config files */
-%x IN_SOURCE
-%x OPEN_SOURCE
-
 %%
 
 <INITIAL>{
-source BEGIN(IN_SOURCE);
-
 if     return IF;
 then   return THEN;
 else   return ELSE;
 elif   return ELIF;
 fi     return FI;
 unset  return UNSET;
+source return SOURCE;
 
 mainmenu_option return MAINMENU_OPTION;
 mainmenu_name   return MAINMENU_NAME;
@@ -82,105 +66,33 @@ define_string   return DEFINE_STRING;
 string          return STRING;
 choice          return CHOICE;
 
-"[["|"]]"       { fprintf(stderr, "error:%s:%d: \"%s\"ksh-style conditionals unsupported\n", filename, yylineno, yytext); exit(1); }
+"[["|"]]"       { fprintf(stderr, "error:%d: \"%s\"ksh-style conditionals unsupported\n", yylineno, yytext); exit(1); }
 
 "["             BEGIN(IN_TEST);
 
 {TRISTATE_CONST} {
-  switch (yytext[0]) {
-  case 'y': yylval.string = "y"; break;
-  case 'n': yylval.string = "n"; break;
-  case 'm': yylval.string = "m"; break;
-  default:
-    fprintf(stderr, "lexer error:%s:%d: incorrect tristate const\n", \
-            filename, yylineno);
-    break;
-  }
-
+  yylval.string = strdup(yytext);
   return TRISTATE_CONST;
 }
 
 0x[0-9a-fA-F]+|[0-9a-fA-F]+ {
-  yylval.string = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(yylval.string, yytext, strlen(yytext) + 1);
+  yylval.string = strdup(yytext);
   return NUMBER;
 }
 
 \"({STRING_CHAR_D})*\"|\'({STRING_CHAR_S})*\' {
-  char *c;
-  yytext[yyleng-1] = '\0'; yytext += 1;
-  yylval.string = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(yylval.string, yytext, strlen(yytext) + 1);
-  for (c = yylval.string; *c != '\0'; c++) {
-    if (*c == '\\' && *(c + 1) == '\n') {
-      *c = ' ';
-      *(c+1) = ' ';
-    }
-  }
+  yylval.string = strdup(yytext);
   return STRING_CONST;
 }
 
 ${WORD} {
-  yytext += 1;
-  yylval.string = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(yylval.string, yytext, strlen(yytext) + 1);
+  yylval.string = strdup(yytext);
   return CONFIG_VAR;
 }
 
-{WORD}|{WORD_BROKEN} {
-  yylval.string = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(yylval.string, yytext, strlen(yytext) + 1);
+{WORD} {
+  yylval.string = strdup(yytext);
   return WORD;
-}
-}
-
-<IN_SOURCE>{
-{FILENAME} {
-  if (source_index >= MAX_SOURCE_DEPTH) {
-    fprintf(stderr, "fatal error: maximum depth of source includes, %d, "
-            "reached.  Set the\nMAX_SOURCE_DEPTH macro to a bigger value.\n",
-            MAX_SOURCE_DEPTH);
-    exit(1);
-  }
-  source_stack[source_index].buffer = YY_CURRENT_BUFFER;
-  source_stack[source_index].name = filename;
-  source_stack[source_index].lineno = yylineno;
-  source_index++;
-  filename = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(filename, yytext, strlen(yytext) + 1);
-  BEGIN(OPEN_SOURCE);
-}
-}
-
-<OPEN_SOURCE>{
-;|{NEWLINE} {
-  yyin = fopen(filename, "r");
-  if (!yyin) {
-    fprintf(stderr, "lexer error:%s:%d: file not found, \"%s\"\n",
-            source_stack[source_index - 1].name, yylineno, filename);
-    exit(1);
-  }
-  yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
-  yylineno = 1;
-  BEGIN(INITIAL);
-#ifdef TRACE_LEXER
-  fprintf(stderr, "trace:%s:%d: entering %s, depth %d\n", source_stack[source_index-1].name, yylineno, filename, source_index);
-#endif //TRACE_LEXER
-}
-}
-
-<<EOF>> {
-#ifdef TRACE_LEXER
-fprintf(stderr, "trace:%s:%d: leaving\n", filename, yylineno);
-#endif //TRACE_LEXER
-if (--source_index < 0) {
-  yyterminate();
-} else {
-  yy_delete_buffer(YY_CURRENT_BUFFER);
-  yy_switch_to_buffer(source_stack[source_index].buffer);
-  free(filename);
-  filename = source_stack[source_index].name;
-  yylineno = source_stack[source_index].lineno + 1;  // plus one for the "source filename\n" command
 }
 }
 
@@ -200,48 +112,33 @@ if (--source_index < 0) {
 "-o"            return TEST_OR;
 "!"             return TEST_BANG;
 \"{TRISTATE_CONST}\" {
-  yytext[yyleng-1] = '\0'; yytext += 1;
-  switch (yytext[0]) {
-  case 'y': yylval.string = "y"; break;
-  case 'n': yylval.string = "n"; break;
-  case 'm': yylval.string = "m"; break;
-  default:
-    fprintf(stderr, "lexer error:%s:%d: incorrect tristate const\n", \
-            filename, yylineno);
-    break;
-  }
+  yylval.string = strdup(yytext);
   return TRISTATE_CONST;
 }
 \"${WORD}\" {
-  yytext[yyleng-1] = '\0'; yytext += 2;
-  yylval.string = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(yylval.string, yytext, strlen(yytext) + 1);
+  yylval.string = strdup(yytext);
   return CONFIG_VAR;
 }
 \"{WORD}\" {
-  yytext[yyleng-1] = '\0'; yytext += 2;
-  yylval.string = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(yylval.string, yytext, strlen(yytext) + 1);
+  yylval.string = strdup(yytext);
   return STRING_CONST;
 }
 \"[0-9]+\" {
-  yytext[yyleng-1] = '\0'; yytext += 1;
-  yylval.string = malloc(sizeof(char) * (strlen(yytext) + 1));
-  strncpy(yylval.string, yytext, strlen(yytext) + 1);
+  yylval.string = strdup(yytext);
   return NUMBER;
 }
 }
 
-<INITIAL,IN_TEST,IN_SOURCE,OPEN_SOURCE>{
+<INITIAL,IN_TEST>{
 {WHITESPACE}+
 }
 
 <INITIAL>{
 {COMMENT}
 ({NEWLINE}|;)+  return NEWLINE;
-. { fprintf(stderr, "lexer error:%s:%d: %s\n", filename, yylineno, yytext); exit(1); }
+. { fprintf(stderr, "lexer error:%d: %s\n", yylineno, yytext); exit(1); }
 }
 
 <IN_TEST>{
-. { fprintf(stderr, "lexer error:%s:%d: %s\n", filename, yylineno, yytext); exit(1); }
+. { fprintf(stderr, "lexer error:%d: %s\n", yylineno, yytext); exit(1); }
 }

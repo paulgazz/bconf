@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern char *filename;
+extern char *bconftext;
 extern int bconflineno;
 
 extern int bconflex(void);
@@ -17,7 +17,7 @@ static void bconf_error(const char *err, ...);
 }
 
 /* bash reserved words */
-%token IF THEN ELSE ELIF FI
+%token IF THEN ELSE ELIF FI UNSET SOURCE
 
 /* bconf reserved words */
 %token MAINMENU_OPTION
@@ -50,9 +50,6 @@ static void bconf_error(const char *err, ...);
 /* bconf conditional expressions */
 %token TEST_STREQ TEST_STRNE TEST_N TEST_Z TEST_EQ TEST_NE TEST_GE TEST_GT
 %token TEST_LE TEST_LT TEST_AND TEST_OR TEST_BANG
-
-/* bash built-ins */
-%token UNSET
 
 /* bash statements appear on one line at a time, or followed by a semicolon */
 %token NEWLINE
@@ -90,7 +87,8 @@ statement:
   | STRING          STRING_CONST WORD STRING_CONST NEWLINE
   | STRING          STRING_CONST WORD WORD NEWLINE
   | CHOICE          STRING_CONST STRING_CONST WORD NEWLINE
-  | UNSET           WORD NEWLINE /* do nothing */
+  | SOURCE          WORD NEWLINE
+  | UNSET           WORD NEWLINE
   | if_block
   ;
 
@@ -163,22 +161,17 @@ id: CONFIG_VAR | TRISTATE_CONST | STRING_CONST | NUMBER ;
 
 #include "bconf.lex.c"
 
-char *filename;
-
 bconf_test_lexer(char *file)
 {
   int t;
 
-  bconfin = fopen(file, "r");
-  filename = file;
-  bconflineno = 1;
   while (t = bconflex()) {
     printf("%s: %s\n", yytname[t - 255], bconftext);
   }
 }
 
 bconferror(char *msg) {
-  fprintf(stderr, "error:%s:%d: %s\n", filename, bconflineno, msg);
+  fprintf(stderr, "error:%d: %s\n", bconflineno, msg);
   exit(1);
 }
 
@@ -193,7 +186,14 @@ main(int argc, char **argv)
 
   file = argv[1];
 
-  bconf_test_lexer(file);
+  bconfin = fopen(file, "r");
+  bconflineno = 1;
+
+  /* bconf_test_lexer(file); */
+#ifdef TRACE
+  yydebug = 1;
+#endif
+  bconfparse();
 
   return 0;
 }
