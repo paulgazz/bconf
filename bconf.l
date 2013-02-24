@@ -71,27 +71,27 @@ choice          return CHOICE;
 "["             BEGIN(IN_TEST);
 
 {TRISTATE_CONST} {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return TRISTATE_CONST;
 }
 
 0x[0-9a-fA-F]+|[0-9a-fA-F]+ {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return NUMBER;
 }
 
 \"({STRING_CHAR_D})*\"|\'({STRING_CHAR_S})*\' {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return STRING_CONST;
 }
 
 ${WORD} {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return CONFIG_VAR;
 }
 
 {WORD} {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return WORD;
 }
 }
@@ -112,19 +112,19 @@ ${WORD} {
 "-o"            return TEST_OR;
 "!"             return TEST_BANG;
 \"{TRISTATE_CONST}\" {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return TRISTATE_CONST;
 }
 \"${WORD}\" {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return CONFIG_VAR;
 }
 \"{WORD}\" {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return STRING_CONST;
 }
 \"[0-9]+\" {
-  yylval.string = strdup(yytext);
+  yylval = strdup(yytext);
   return NUMBER;
 }
 }

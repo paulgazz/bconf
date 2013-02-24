@@ -1288,7 +1288,7 @@ case 30:
 YY_RULE_SETUP
 #line 73 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return TRISTATE_CONST;
 }
 	YY_BREAK
@@ -1296,7 +1296,7 @@ case 31:
 YY_RULE_SETUP
 #line 78 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return NUMBER;
 }
 	YY_BREAK
@@ -1305,7 +1305,7 @@ case 32:
 YY_RULE_SETUP
 #line 83 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return STRING_CONST;
 }
 	YY_BREAK
@@ -1313,7 +1313,7 @@ case 33:
 YY_RULE_SETUP
 #line 88 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return CONFIG_VAR;
 }
 	YY_BREAK
@@ -1321,7 +1321,7 @@ case 34:
 YY_RULE_SETUP
 #line 93 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return WORD;
 }
 	YY_BREAK
@@ -1401,7 +1401,7 @@ case 49:
 YY_RULE_SETUP
 #line 114 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return TRISTATE_CONST;
 }
 	YY_BREAK
@@ -1409,7 +1409,7 @@ case 50:
 YY_RULE_SETUP
 #line 118 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return CONFIG_VAR;
 }
 	YY_BREAK
@@ -1417,7 +1417,7 @@ case 51:
 YY_RULE_SETUP
 #line 122 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return STRING_CONST;
 }
 	YY_BREAK
@@ -1425,7 +1425,7 @@ case 52:
 YY_RULE_SETUP
 #line 126 "bconf.l"
 {
-  yylval.string = strdup(bconftext);
+  yylval = strdup(bconftext);
   return NUMBER;
 }
 	YY_BREAK
