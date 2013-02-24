@@ -77,6 +77,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define YYSTYPE char *
+
 extern char *bconftext;
 extern int bconflineno;
 
@@ -163,16 +165,7 @@ static void bconf_error(const char *err, ...);
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef union YYSTYPE
-{
-
-
-  char *string;
-  int num;
-
-
-
-} YYSTYPE;
+typedef int YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -500,13 +493,13 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    61,    61,    63,    66,    67,    70,    71,    72,    73,
-      74,    75,    76,    77,    78,    79,    80,    81,    82,    83,
-      84,    85,    86,    87,    88,    89,    90,    91,    92,    96,
-      97,   100,   102,   104,   106,   109,   110,   111,   112,   114,
-     116,   117,   120,   122,   124,   127,   129,   131,   134,   135,
-     139,   140,   144,   145,   146,   147,   148,   149,   150,   151,
-     152,   153,   154,   155,   158,   158,   158,   158
+       0,    55,    55,    57,    60,    61,    64,    65,    66,    67,
+      68,    69,    70,    71,    72,    73,    74,    75,    76,    77,
+      78,    79,    80,    81,    82,    83,    84,    85,    86,    90,
+      91,    94,    96,    98,   100,   103,   104,   105,   106,   108,
+     110,   111,   114,   116,   118,   121,   123,   125,   128,   129,
+     133,   134,   138,   139,   140,   141,   142,   143,   144,   145,
+     146,   147,   148,   149,   152,   152,   152,   152
 };
 #endif
 
@@ -1530,22 +1523,7 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 7:
-
-    { printf("%s %s %s", bconftext, bconftext, bconftext); }
-    break;
-
-  case 29:
-
-    { (yyval.string) = (yyvsp[(1) - (1)].string); }
-    break;
-
-  case 30:
-
-    { (yyval.string) = (yyvsp[(1) - (1)].string); }
-    break;
-
-
+      
 
       default: break;
     }
@@ -1799,16 +1777,19 @@ main(int argc, char **argv)
   char *file;
 
   if (argc == 1) {
-    printf("USAGE: %s arch/i386/config.in", argv[0]);
+    printf("USAGE: %s arch/i386/config.in\n", argv[0]);
+    printf("USAGE: %s -\n", argv[0]);
     exit(0);
   }
 
   file = argv[1];
 
-  bconfin = fopen(file, "r");
   bconflineno = 1;
+  if ('-' != file[0] && strlen(file) != 1)
+    bconfin = fopen(file, "r");
 
-  /* bconf_test_lexer(file); */
+  bconf_test_lexer(file);
+
 #ifdef TRACE
   yydebug = 1;
 #endif

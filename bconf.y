@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define YYSTYPE char *
+
 extern char *bconftext;
 extern int bconflineno;
 
@@ -9,12 +11,6 @@ extern int bconflex(void);
 static void bconf_error(const char *err, ...);
 
 %}
-
-%union
-{
-  char *string;
-  int num;
-}
 
 /* bash reserved words */
 %token IF THEN ELSE ELIF FI UNSET SOURCE
@@ -42,10 +38,10 @@ static void bconf_error(const char *err, ...);
 %token CHOICE
 
 /* bconf values */
-%token <string> CONFIG_VAR WORD NUMBER
+%token CONFIG_VAR WORD NUMBER
 
 /* bconf literals */
-%token <string> STRING_CONST TRISTATE_CONST
+%token STRING_CONST TRISTATE_CONST
 
 /* bconf conditional expressions */
 %token TEST_STREQ TEST_STRNE TEST_N TEST_Z TEST_EQ TEST_NE TEST_GE TEST_GT
@@ -53,8 +49,6 @@ static void bconf_error(const char *err, ...);
 
 /* bash statements appear on one line at a time, or followed by a semicolon */
 %token NEWLINE
-
-%type <string> tristate_value
 
 %%
 
@@ -93,8 +87,8 @@ statement:
   ;
 
 tristate_value:
-    TRISTATE_CONST { $$ = $1; }
-  | CONFIG_VAR { $$ = $1; }
+    TRISTATE_CONST
+  | CONFIG_VAR
   ;
 
 tristate_const_opt:
@@ -180,16 +174,19 @@ main(int argc, char **argv)
   char *file;
 
   if (argc == 1) {
-    printf("USAGE: %s arch/i386/config.in", argv[0]);
+    printf("USAGE: %s arch/i386/config.in\n", argv[0]);
+    printf("USAGE: %s -\n", argv[0]);
     exit(0);
   }
 
   file = argv[1];
 
-  bconfin = fopen(file, "r");
   bconflineno = 1;
+  if ('-' != file[0] && strlen(file) != 1)
+    bconfin = fopen(file, "r");
 
-  /* bconf_test_lexer(file); */
+  bconf_test_lexer(file);
+
 #ifdef TRACE
   yydebug = 1;
 #endif
